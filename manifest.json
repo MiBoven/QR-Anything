@@ -1,0 +1,14 @@
+{
+  "name": "QR Anything",
+  "short_name": "QR Anything",
+  "description": "Give me a Quick Response! Create styled, logo-branded QR codes entirely in your browser.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#131313",
+  "theme_color": "#131313",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

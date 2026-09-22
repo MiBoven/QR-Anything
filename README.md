@@ -71,12 +71,12 @@ Each can be downloaded from `https://cdn.simpleicons.org/<platform-key>` (e.g. `
 
 `index.html` and `manifest.json` already reference these files at the repo root; they aren't included yet:
 
-- `favicon.ico`
-- `favicon-16x16.png`
-- `favicon-32x32.png`
-- `apple-touch-icon.png` (180×180)
-- `icons/icon-192.png`
-- `icons/icon-512.png`
+- `favicon.ico` (repo root — crawler compatibility)
+- `icon-192.png` (repo root — required for the Chrome install prompt)
+- `icon-512.png` (repo root — required for the Chrome install prompt)
+- `icons/favicon-16x16.png`
+- `icons/favicon-32x32.png`
+- `icons/apple-touch-icon.png` (180×180)
 - `icons/logo.svg` (used in the header brand block)
 
 Until these are added, browsers show a generic icon and the header brand logo is blank — nothing else breaks.
@@ -94,7 +94,11 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
-### 0.1.0 — [DATUM einfügen] — Initial release
+### 0.1.1 — 22.09.2026 — Icon path fixes
+- Favicon/app-icon references in `index.html` and `manifest.json` corrected to match the suite's folder convention: `favicon-16x16.png`, `favicon-32x32.png` and `apple-touch-icon.png` now live under `/icons/`, while `icon-192.png` and `icon-512.png` stay at the repo root (required for the Chrome install prompt)
+- No functional changes to QR generation
+
+### 0.1.0 — 21.09.2026 — Initial release
 - Content types: plain text, links, Wi-Fi, vCard, e-mail, phone, SMS
 - Dot and corner shape styling, custom code/background colors
 - Center logo embedding with automatic high error correction and size cap

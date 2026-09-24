@@ -196,19 +196,48 @@
     <div class="row">
       <div class="field">
         <label class="label-sub reset-label" data-target="frameColor" title="Click to reset">Color</label>
-        <div class="color-row">
+        <div class="color-row" id="frameColorRow">
           <input type="color" id="frameColor" value="#000000">
           <input type="text" id="frameColorHex" class="hex-input" value="#000000" maxlength="7">
         </div>
+        <label class="checkbox-row" style="margin-top:6px;"><input type="checkbox" id="frameColorSync"> Same as code color</label>
       </div>
-      <div class="field"><label class="label-sub reset-label" data-target="frameThickness" title="Click to reset">Thickness</label><input type="number" id="frameThickness" min="1" max="40" value="8"></div>
+      <div class="field">
+        <label class="label-sub reset-label" data-target="frameThickness" title="Click to reset">Thickness</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" data-target="frameThickness" data-step="-1">−</button>
+          <input type="number" id="frameThickness" min="1" max="40" value="8">
+          <button type="button" class="stepper-btn" data-target="frameThickness" data-step="1">+</button>
+        </div>
+      </div>
     </div>
     <div class="row">
-      <div class="field"><label class="label-sub reset-label" data-target="frameRadius" title="Click to reset">Corner radius</label><input type="number" id="frameRadius" min="0" max="100" value="16"></div>
-      <div class="field"><label class="label-sub reset-label" data-target="framePadding" title="Click to reset">Padding (inside)</label><input type="number" id="framePadding" min="0" max="100" value="20"></div>
+      <div class="field">
+        <label class="label-sub reset-label" data-target="framePadding" title="Click to reset">Padding (inside)</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" data-target="framePadding" data-step="-1">−</button>
+          <input type="number" id="framePadding" min="0" max="100" value="20">
+          <button type="button" class="stepper-btn" data-target="framePadding" data-step="1">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label-sub reset-label" data-target="frameMargin" title="Click to reset">Margin (outside)</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" data-target="frameMargin" data-step="-1">−</button>
+          <input type="number" id="frameMargin" min="0" max="100" value="12">
+          <button type="button" class="stepper-btn" data-target="frameMargin" data-step="1">+</button>
+        </div>
+      </div>
     </div>
     <div class="row">
-      <div class="field"><label class="label-sub reset-label" data-target="frameMargin" title="Click to reset">Margin (outside)</label><input type="number" id="frameMargin" min="0" max="100" value="12"></div>
+      <div class="field">
+        <label class="label-sub reset-label" data-target="frameRadius" title="Click to reset">Corner radius</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" data-target="frameRadius" data-step="-1">−</button>
+          <input type="number" id="frameRadius" min="0" max="100" value="16">
+          <button type="button" class="stepper-btn" data-target="frameRadius" data-step="1">+</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -245,7 +274,7 @@
 <div id="scanResult" class="scan-result" hidden></div>
 <button id="scanTestBtn" class="secondary full">Run scan test</button>
 
-<footer>QR Anything · v0.1.3</footer>
+<footer>QR Anything · v0.1.4</footer>
 
 <!-- ========== Settings modal ========== -->
 <div class="modal-bg" id="settingsModalBg">
@@ -262,7 +291,7 @@
   <div class="modal">
     <h2>About QR Anything</h2>
     <p>QR Anything — Give me a Quick Response!<br>
-    Version 0.1.3</p>
+    Version 0.1.4</p>
     <p class="hint">Creates styled QR codes for text, links, Wi-Fi, contacts and more — entirely in your browser. Nothing is ever uploaded.</p>
     <button class="close" id="closeAboutModal">Close</button>
   </div>

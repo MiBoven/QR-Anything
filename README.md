@@ -94,6 +94,13 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
+### 0.1.4 — [DATUM einfügen] — Frame color sync, steppers, persistence, filenames
+- Frame color now has a "Same as code color" checkbox; when on, the color picker is hidden and the frame follows the code color automatically
+- Frame's Padding and Margin fields now sit side by side
+- All Frame number fields (thickness, padding, margin, corner radius) got +/− stepper buttons, since native number-input arrows aren't always available on mobile
+- The entered content (text, link, Wi-Fi, contact, etc.) is now saved locally too, so the QR code reappears correctly after the page reloads (e.g. after switching apps and back) instead of only the style settings
+- Downloaded files are now named descriptively instead of always "qrcode": `qr-code--<first 20 characters of the content>`, or for links `qr-code--www--<first 15 characters after the last "#" or "/" (# takes priority)>`
+
 ### 0.1.3 — [DATUM einfügen] — Style toggle, layout & frame refinements
 - "Style" renamed to "Adjust style" and made checkbox-toggleable, like the other optional sections — when off, a plain black-on-white square code is used
 - Download buttons (PNG/JPG/SVG) moved directly under the QR code; "Run scan test" moved to the very bottom of the page

@@ -99,6 +99,19 @@ input[type=color] {
 .hex-input { flex: 1; font-family: ui-monospace, monospace; }
 .reset-label { cursor: pointer; user-select: none; }
 .reset-label:hover, .reset-label:active { color: var(--accent); }
+
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper input[type=number] {
+  text-align: center; -moz-appearance: textfield; flex: 1; min-width: 0;
+}
+.stepper input[type=number]::-webkit-inner-spin-button,
+.stepper input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper-btn {
+  flex: 0 0 34px; width: 34px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: 17px; font-weight: 600; cursor: pointer;
+  line-height: 1;
+}
+.stepper-btn:active { background: var(--accent); color: var(--accent-text); }
 input[type=range] { flex: 1; accent-color: var(--accent); }
 input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .qty-val { font-size: 13px; font-weight: 600; min-width: 38px; text-align: right; }

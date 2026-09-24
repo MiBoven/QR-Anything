@@ -213,13 +213,35 @@ function loadImageFile(file) {
 const frameEnabled = document.getElementById('frameEnabled');
 const frameFields = document.getElementById('frameFields');
 const frameColor = document.getElementById('frameColor');
+const frameColorRow = document.getElementById('frameColorRow');
+const frameColorSync = document.getElementById('frameColorSync');
 const frameThickness = document.getElementById('frameThickness');
 const frameRadius = document.getElementById('frameRadius');
 const framePadding = document.getElementById('framePadding');
 const frameMargin = document.getElementById('frameMargin');
 frameEnabled.addEventListener('change', () => { frameFields.hidden = !frameEnabled.checked; scheduleRender(); });
+frameColorSync.addEventListener('change', () => { frameColorRow.hidden = frameColorSync.checked; scheduleRender(); });
 [frameThickness, frameRadius, framePadding, frameMargin].forEach(el => el.addEventListener('input', scheduleRender));
 wireColorHex('frameColor', 'frameColorHex');
+
+// Effective frame color: either the user's own choice, or synced to the code color
+function getFrameColor(style) {
+  return frameColorSync.checked ? style.dotColor : frameColor.value;
+}
+
+// ---------- Number steppers (up/down buttons for number inputs) ----------
+document.querySelectorAll('.stepper-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = document.getElementById(btn.dataset.target);
+    if (!target) return;
+    const step = Number(btn.dataset.step);
+    const min = target.min !== '' ? Number(target.min) : -Infinity;
+    const max = target.max !== '' ? Number(target.max) : Infinity;
+    const next = Math.min(max, Math.max(min, Number(target.value) + step));
+    target.value = next;
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+});
 
 // ---------- Title ----------
 const titleEnabled = document.getElementById('titleEnabled');
@@ -380,7 +402,7 @@ async function render() {
   // frame
   if (frameEnabled.checked) {
     const r = Number(frameRadius.value);
-    roundRectStroke(ctx, qrOriginX + margin + frameW / 2, qrOriginY + margin + frameW / 2, frameBlockSize - frameW, frameBlockSize - frameW, r, frameColor.value, frameW);
+    roundRectStroke(ctx, qrOriginX + margin + frameW / 2, qrOriginY + margin + frameW / 2, frameBlockSize - frameW, frameBlockSize - frameW, r, getFrameColor(style), frameW);
   }
 
   // the QR code itself
@@ -466,11 +488,34 @@ document.getElementById('scanTestBtn').addEventListener('click', () => {
 });
 
 // ---------- Export ----------
+function sanitizeFilenamePart(s) {
+  return (s || '').replace(/[\\/:*?"<>|]/g, '').trim().replace(/\s+/g, '_');
+}
+
+// "qr-code--<first 20 chars of the text>", or for links:
+// "qr-code--www--<first 15 chars after the last # (preferred) or last />"
+function buildDownloadName() {
+  const dataStr = buildData();
+  if (dataType.value === 'url' && dataStr) {
+    const rest = dataStr.replace(/^https?:\/\//i, '');
+    const hashIdx = rest.lastIndexOf('#');
+    const slashIdx = rest.lastIndexOf('/');
+    let after;
+    if (hashIdx !== -1) after = rest.slice(hashIdx + 1);
+    else if (slashIdx !== -1) after = rest.slice(slashIdx + 1);
+    else after = rest;
+    const slug = sanitizeFilenamePart(after || rest).slice(0, 15);
+    return `qr-code--www--${slug || 'link'}`;
+  }
+  const base = sanitizeFilenamePart(dataStr).slice(0, 20);
+  return `qr-code--${base || 'code'}`;
+}
+
 function downloadCanvas(mime, ext) {
   previewCanvas.toBlob(blob => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `qrcode.${ext}`;
+    a.download = `${buildDownloadName()}.${ext}`;
     a.click();
   }, mime, 0.95);
 }
@@ -490,19 +535,48 @@ document.getElementById('downloadSvg').addEventListener('click', () => {
     backgroundOptions: { color: style.bgColor },
     ...(useLogo ? { image: logoImage.src, imageOptions: { imageSize: MAX_LOGO_RATIO, margin: 8 } } : {}),
   });
-  qr.download({ name: 'qrcode', extension: 'svg' });
+  qr.download({ name: buildDownloadName(), extension: 'svg' });
 });
 
+
 // ---------- Settings persistence ----------
+const DATA_FIELD_IDS = [
+  'f-text', 'f-url',
+  'f-wifi-ssid', 'f-wifi-pass', 'f-wifi-enc', 'f-wifi-hidden',
+  'f-vc-first', 'f-vc-last', 'f-vc-org', 'f-vc-phone', 'f-vc-email', 'f-vc-url',
+  'f-em-to', 'f-em-subject', 'f-em-body',
+  'f-phone',
+  'f-sms-number', 'f-sms-body',
+];
+function getDataFieldValues() {
+  const out = {};
+  DATA_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) out[id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  return out;
+}
+function setDataFieldValues(vals) {
+  if (!vals) return;
+  DATA_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !(id in vals)) return;
+    if (el.type === 'checkbox') el.checked = !!vals[id];
+    else el.value = vals[id];
+  });
+}
+
 function saveSettings() {
   const s = {
     dataType: dataType.value, dotType: dotType.value, cornerType: cornerType.value,
     dotColor: dotColor.value, bgColor: bgColor.value,
     logoEnabled: logoEnabled.checked, bgImageEnabled: bgImageEnabled.checked, bgImageOpacity: bgImageOpacity.value,
-    frameEnabled: frameEnabled.checked, frameColor: frameColor.value, frameThickness: frameThickness.value,
+    frameEnabled: frameEnabled.checked, frameColor: frameColor.value, frameColorSync: frameColorSync.checked,
+    frameThickness: frameThickness.value,
     frameRadius: frameRadius.value, framePadding: framePadding.value, frameMargin: frameMargin.value,
     titleEnabled: titleEnabled.checked, titlePosition: titlePosition.value,
     socialEnabled: socialEnabled.checked, styleEnabled: styleEnabled.checked,
+    dataFields: getDataFieldValues(),
   };
   localStorage.setItem('qra-settings', JSON.stringify(s));
 }
@@ -521,6 +595,7 @@ function loadSettings() {
   bgImageOpacity.value = s.bgImageOpacity ?? bgImageOpacity.value;
   frameEnabled.checked = !!s.frameEnabled;
   frameColor.value = s.frameColor ?? frameColor.value;
+  frameColorSync.checked = !!s.frameColorSync;
   frameThickness.value = s.frameThickness ?? frameThickness.value;
   frameRadius.value = s.frameRadius ?? frameRadius.value;
   framePadding.value = s.framePadding ?? framePadding.value;
@@ -528,12 +603,14 @@ function loadSettings() {
   titleEnabled.checked = !!s.titleEnabled;
   titlePosition.value = s.titlePosition ?? titlePosition.value;
   socialEnabled.checked = s.socialEnabled !== false;
+  setDataFieldValues(s.dataFields);
 
   typeFieldsEls.forEach(el => el.hidden = el.id !== 'fields-' + dataType.value);
   styleFields.hidden = !styleEnabled.checked;
   logoFields.hidden = !logoEnabled.checked;
   bgImageFields.hidden = !bgImageEnabled.checked;
   frameFields.hidden = !frameEnabled.checked;
+  frameColorRow.hidden = frameColorSync.checked;
   titleFields.hidden = !titleEnabled.checked;
   bgImageOpacityLabel.textContent = bgImageOpacity.value + '%';
   document.getElementById('dotColorHex').value = dotColor.value;

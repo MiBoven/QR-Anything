@@ -94,6 +94,10 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
+### 0.1.2 — [DATUM einfügen] — Live preview on mobile, always-visible code
+- On phone-sized screens, the live preview now stays pinned at the top of the screen while the rest of the settings scroll underneath, so style changes are visible immediately
+- A QR code is now shown from the very start (encoding an empty string) instead of a blank placeholder
+
 ### 0.1.1 — 22.09.2026 — Icon path fixes
 - Favicon/app-icon references in `index.html` and `manifest.json` corrected to match the suite's folder convention: `favicon-16x16.png`, `favicon-32x32.png` and `apple-touch-icon.png` now live under `/icons/`, while `icon-192.png` and `icon-512.png` stay at the repo root (required for the Chrome install prompt)
 - No functional changes to QR generation

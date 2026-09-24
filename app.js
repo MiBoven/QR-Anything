@@ -233,18 +233,10 @@ async function render() {
   socialCard.hidden = !social;
   if (social) socialLabel.textContent = `${social.label} logo detected`;
 
-  if (!dataStr) {
-    const ctx = previewCanvas.getContext('2d');
-    previewCanvas.width = QR_SIZE; previewCanvas.height = QR_SIZE;
-    ctx.fillStyle = getComputedStyle(root).getPropertyValue('--surface-2');
-    ctx.fillRect(0, 0, QR_SIZE, QR_SIZE);
-    saveSettings();
-    return;
-  }
-
   const useLogo = logoEnabled.checked && logoImage;
 
-  // 1. Render the pure, styled QR code via qr-code-styling into an offscreen container
+  // 1. Render the pure, styled QR code via qr-code-styling into an offscreen container.
+  // A QR code is shown from the very start, even for an empty string.
   const qrOptions = {
     width: QR_SIZE,
     height: QR_SIZE,
@@ -262,12 +254,25 @@ async function render() {
     qrOptions.imageOptions = { imageSize: MAX_LOGO_RATIO, margin: 8, crossOrigin: 'anonymous' };
   }
 
-  const holder = document.createElement('div');
-  const qr = new QRCodeStyling(qrOptions);
-  qr.append(holder);
-  await new Promise(r => setTimeout(r, 30)); // let the library finish drawing
-  const qrCanvas = holder.querySelector('canvas');
-  if (!qrCanvas) return;
+  let qrCanvas = null;
+  try {
+    const holder = document.createElement('div');
+    const qr = new QRCodeStyling(qrOptions);
+    qr.append(holder);
+    await new Promise(r => setTimeout(r, 30)); // let the library finish drawing
+    qrCanvas = holder.querySelector('canvas');
+  } catch (err) {
+    qrCanvas = null; // e.g. content the encoder can't handle — fall back to a blank placeholder below
+  }
+
+  if (!qrCanvas) {
+    const ctx = previewCanvas.getContext('2d');
+    previewCanvas.width = QR_SIZE; previewCanvas.height = QR_SIZE;
+    ctx.fillStyle = getComputedStyle(root).getPropertyValue('--surface-2');
+    ctx.fillRect(0, 0, QR_SIZE, QR_SIZE);
+    saveSettings();
+    return;
+  }
 
   // 2. Compose: background image -> QR -> frame -> title, onto the master canvas
   const pad = frameEnabled.checked ? Number(framePadding.value) : 0;

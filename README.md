@@ -94,9 +94,16 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
-### 0.1.2 — [DATUM einfügen] — Live preview on mobile, always-visible code
+### 0.1.3 — [DATUM einfügen] — Style toggle, layout & frame refinements
+- "Style" renamed to "Adjust style" and made checkbox-toggleable, like the other optional sections — when off, a plain black-on-white square code is used
+- Download buttons (PNG/JPG/SVG) moved directly under the QR code; "Run scan test" moved to the very bottom of the page
+- Frame gained an adjustable outer margin (space between the frame and the image edge), alongside the existing inside padding
+- Color pickers (code, background, frame) now have a paired hex text field for typing an exact HTML color code
+- Every adjustable value's label can be clicked to reset that value to its default
+- Empty input now shows a friendly placeholder (🐒 + a hint where the code will appear) instead of a blank gray square — an empty string can't actually be encoded as a QR code per the standard, so no fake placeholder content is generated
+
+### 0.1.2 — [DATUM einfügen] — Live preview on mobile
 - On phone-sized screens, the live preview now stays pinned at the top of the screen while the rest of the settings scroll underneath, so style changes are visible immediately
-- A QR code is now shown from the very start (encoding an empty string) instead of a blank placeholder
 
 ### 0.1.1 — 22.09.2026 — Icon path fixes
 - Favicon/app-icon references in `index.html` and `manifest.json` corrected to match the suite's folder convention: `favicon-16x16.png`, `favicon-32x32.png` and `apple-touch-icon.png` now live under `/icons/`, while `icon-192.png` and `icon-512.png` stay at the repo root (required for the Chrome install prompt)

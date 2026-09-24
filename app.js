@@ -135,11 +135,33 @@ function detectSocial(dataStr) {
 }
 
 // ---------- Style controls ----------
+const styleEnabled = document.getElementById('styleEnabled');
+const styleFields = document.getElementById('styleFields');
 const dotType = document.getElementById('dotType');
 const cornerType = document.getElementById('cornerType');
 const dotColor = document.getElementById('dotColor');
 const bgColor = document.getElementById('bgColor');
-[dotType, cornerType, dotColor, bgColor].forEach(el => el.addEventListener('input', scheduleRender));
+styleEnabled.addEventListener('change', () => { styleFields.hidden = !styleEnabled.checked; scheduleRender(); });
+[dotType, cornerType].forEach(el => el.addEventListener('input', scheduleRender));
+wireColorHex('dotColor', 'dotColorHex');
+wireColorHex('bgColor', 'bgColorHex');
+
+// Syncs a <input type=color> with a paired hex text field in both directions.
+function wireColorHex(colorId, hexId) {
+  const colorEl = document.getElementById(colorId);
+  const hexEl = document.getElementById(hexId);
+  colorEl.addEventListener('input', () => { hexEl.value = colorEl.value; scheduleRender(); });
+  hexEl.addEventListener('input', () => {
+    const v = hexEl.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      colorEl.value = v.toLowerCase();
+      scheduleRender();
+    } else if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+      colorEl.value = ('#' + [...v.slice(1)].map(c => c + c).join('')).toLowerCase();
+      scheduleRender();
+    }
+  });
+}
 
 // ---------- Logo ----------
 const logoEnabled = document.getElementById('logoEnabled');
@@ -194,8 +216,10 @@ const frameColor = document.getElementById('frameColor');
 const frameThickness = document.getElementById('frameThickness');
 const frameRadius = document.getElementById('frameRadius');
 const framePadding = document.getElementById('framePadding');
+const frameMargin = document.getElementById('frameMargin');
 frameEnabled.addEventListener('change', () => { frameFields.hidden = !frameEnabled.checked; scheduleRender(); });
-[frameColor, frameThickness, frameRadius, framePadding].forEach(el => el.addEventListener('input', scheduleRender));
+[frameThickness, frameRadius, framePadding, frameMargin].forEach(el => el.addEventListener('input', scheduleRender));
+wireColorHex('frameColor', 'frameColorHex');
 
 // ---------- Title ----------
 const titleEnabled = document.getElementById('titleEnabled');
@@ -219,6 +243,45 @@ document.querySelectorAll('#fields-text, #fields-url, #fields-wifi, #fields-vcar
 const QR_SIZE = 600;             // base QR module area in px
 const MAX_LOGO_RATIO = 0.28;     // logo never larger than 28% of QR area
 
+function getStyleValues() {
+  if (styleEnabled.checked) {
+    return { dotType: dotType.value, cornerType: cornerType.value, dotColor: dotColor.value, bgColor: bgColor.value };
+  }
+  return { dotType: 'square', cornerType: 'square', dotColor: '#000000', bgColor: '#ffffff' };
+}
+
+function drawPlaceholder(emoji, hint) {
+  const ctx = previewCanvas.getContext('2d');
+  previewCanvas.width = QR_SIZE; previewCanvas.height = QR_SIZE;
+  ctx.fillStyle = getComputedStyle(root).getPropertyValue('--surface-2');
+  ctx.fillRect(0, 0, QR_SIZE, QR_SIZE);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = getComputedStyle(root).getPropertyValue('--text-secondary');
+  ctx.font = '120px -apple-system, "Segoe UI", Roboto, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, QR_SIZE / 2, QR_SIZE / 2 - 50);
+  ctx.font = '600 26px -apple-system, "Segoe UI", Roboto, sans-serif';
+  wrapText(ctx, hint, QR_SIZE / 2, QR_SIZE / 2 + 70, QR_SIZE - 100, 34);
+}
+
+function wrapText(ctx, text, cx, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  const lines = [];
+  words.forEach(word => {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  });
+  if (line) lines.push(line);
+  const startY = y - ((lines.length - 1) * lineHeight) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineHeight));
+}
+
 // ---------- Core render pipeline ----------
 const previewCanvas = document.getElementById('previewCanvas');
 let renderTimer = null;
@@ -234,9 +297,18 @@ async function render() {
   if (social) socialLabel.textContent = `${social.label} logo detected`;
 
   const useLogo = logoEnabled.checked && logoImage;
+  const style = getStyleValues();
 
-  // 1. Render the pure, styled QR code via qr-code-styling into an offscreen container.
-  // A QR code is shown from the very start, even for an empty string.
+  // No content yet: show a friendly placeholder instead of attempting to
+  // encode an empty string (which isn't valid per the QR standard).
+  if (!dataStr) {
+    drawPlaceholder('🐒', 'Hier erscheint dein QR-Code, sobald du oben etwas eingibst.');
+    render.isPlaceholder = true;
+    saveSettings();
+    return;
+  }
+
+  // 1. Render the pure, styled QR code via qr-code-styling into an offscreen container
   const qrOptions = {
     width: QR_SIZE,
     height: QR_SIZE,
@@ -244,10 +316,10 @@ async function render() {
     data: dataStr,
     margin: 4,
     qrOptions: { errorCorrectionLevel: useLogo ? 'H' : 'Q' },
-    dotsOptions: { color: dotColor.value, type: dotType.value },
-    cornersSquareOptions: { color: dotColor.value, type: cornerType.value === 'dot' ? 'dot' : (cornerType.value === 'extra-rounded' ? 'extra-rounded' : 'square') },
-    cornersDotOptions: { color: dotColor.value, type: cornerType.value === 'dot' ? 'dot' : 'square' },
-    backgroundOptions: { color: (bgImageEnabled.checked && backgroundImage) ? 'rgba(0,0,0,0)' : bgColor.value },
+    dotsOptions: { color: style.dotColor, type: style.dotType },
+    cornersSquareOptions: { color: style.dotColor, type: style.cornerType === 'dot' ? 'dot' : (style.cornerType === 'extra-rounded' ? 'extra-rounded' : 'square') },
+    cornersDotOptions: { color: style.dotColor, type: style.cornerType === 'dot' ? 'dot' : 'square' },
+    backgroundOptions: { color: (bgImageEnabled.checked && backgroundImage) ? 'rgba(0,0,0,0)' : style.bgColor },
   };
   if (useLogo) {
     qrOptions.image = logoImage.src;
@@ -262,14 +334,12 @@ async function render() {
     await new Promise(r => setTimeout(r, 30)); // let the library finish drawing
     qrCanvas = holder.querySelector('canvas');
   } catch (err) {
-    qrCanvas = null; // e.g. content the encoder can't handle — fall back to a blank placeholder below
+    qrCanvas = null; // e.g. content too long for the encoder to handle
   }
 
   if (!qrCanvas) {
-    const ctx = previewCanvas.getContext('2d');
-    previewCanvas.width = QR_SIZE; previewCanvas.height = QR_SIZE;
-    ctx.fillStyle = getComputedStyle(root).getPropertyValue('--surface-2');
-    ctx.fillRect(0, 0, QR_SIZE, QR_SIZE);
+    drawPlaceholder('⚠️', 'Dieser Inhalt kann nicht als QR-Code kodiert werden — bitte kürzen.');
+    render.isPlaceholder = true;
     saveSettings();
     return;
   }
@@ -277,7 +347,9 @@ async function render() {
   // 2. Compose: background image -> QR -> frame -> title, onto the master canvas
   const pad = frameEnabled.checked ? Number(framePadding.value) : 0;
   const frameW = frameEnabled.checked ? Number(frameThickness.value) : 0;
-  const innerSize = QR_SIZE + pad * 2 + frameW * 2;
+  const margin = frameEnabled.checked ? Number(frameMargin.value) : 0;
+  const frameBlockSize = QR_SIZE + pad * 2 + frameW * 2; // QR + padding + frame stroke, no outer margin
+  const innerSize = frameBlockSize + margin * 2;          // + the blank margin around the frame
 
   const hasTitle = titleEnabled.checked && titleText.value.trim();
   const titlePos = titlePosition.value;
@@ -291,28 +363,28 @@ async function render() {
   previewCanvas.height = finalH;
   const ctx = previewCanvas.getContext('2d');
   ctx.clearRect(0, 0, finalW, finalH);
-  ctx.fillStyle = bgColor.value;
+  ctx.fillStyle = style.bgColor;
   ctx.fillRect(0, 0, finalW, finalH);
 
   let qrOriginX = hasTitle && titlePos === 'left' ? titleSpace : 0;
   let qrOriginY = hasTitle && titlePos === 'top' ? titleSpace : 0;
 
-  // background image (behind the code)
+  // background image (behind the code, confined to the frame block — not the outer margin)
   if (bgImageEnabled.checked && backgroundImage) {
     ctx.save();
     ctx.globalAlpha = Number(bgImageOpacity.value) / 100;
-    drawImageCover(ctx, backgroundImage, qrOriginX, qrOriginY, innerSize, innerSize);
+    drawImageCover(ctx, backgroundImage, qrOriginX + margin, qrOriginY + margin, frameBlockSize, frameBlockSize);
     ctx.restore();
   }
 
   // frame
   if (frameEnabled.checked) {
     const r = Number(frameRadius.value);
-    roundRectStroke(ctx, qrOriginX + frameW / 2, qrOriginY + frameW / 2, innerSize - frameW, innerSize - frameW, r, frameColor.value, frameW);
+    roundRectStroke(ctx, qrOriginX + margin + frameW / 2, qrOriginY + margin + frameW / 2, frameBlockSize - frameW, frameBlockSize - frameW, r, frameColor.value, frameW);
   }
 
   // the QR code itself
-  ctx.drawImage(qrCanvas, qrOriginX + pad + frameW, qrOriginY + pad + frameW, QR_SIZE, QR_SIZE);
+  ctx.drawImage(qrCanvas, qrOriginX + margin + frameW + pad, qrOriginY + margin + frameW + pad, QR_SIZE, QR_SIZE);
 
   // social platform logo badge next to the title
   if (social && socialEnabled.checked) {
@@ -327,7 +399,7 @@ async function render() {
 
   // title
   if (hasTitle) {
-    ctx.fillStyle = dotColor.value;
+    ctx.fillStyle = style.dotColor;
     ctx.font = '600 28px -apple-system, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -344,6 +416,7 @@ async function render() {
   }
 
   render.lastData = dataStr;
+  render.isPlaceholder = false;
   saveSettings();
 }
 
@@ -371,10 +444,15 @@ function roundRectStroke(ctx, x, y, w, h, r, color, lineWidth) {
 // ---------- Scan test (software-only, no camera) ----------
 document.getElementById('scanTestBtn').addEventListener('click', () => {
   const resultEl = document.getElementById('scanResult');
+  resultEl.hidden = false;
+  if (render.isPlaceholder || !render.lastData) {
+    resultEl.textContent = 'ℹ️ Gib zuerst Inhalt ein, um den Scan-Test durchzuführen.';
+    resultEl.className = 'scan-result fail';
+    return;
+  }
   const ctx = previewCanvas.getContext('2d');
   const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
   const code = jsQR(imageData.data, imageData.width, imageData.height);
-  resultEl.hidden = false;
   if (code && code.data === render.lastData) {
     resultEl.textContent = '✅ Scannable — decodes correctly.';
     resultEl.className = 'scan-result ok';
@@ -402,13 +480,14 @@ document.getElementById('downloadSvg').addEventListener('click', () => {
   const dataStr = buildData();
   if (!dataStr) return;
   const useLogo = logoEnabled.checked && logoImage;
+  const style = getStyleValues();
   const qr = new QRCodeStyling({
     width: QR_SIZE, height: QR_SIZE, type: 'svg', data: dataStr, margin: 4,
     qrOptions: { errorCorrectionLevel: useLogo ? 'H' : 'Q' },
-    dotsOptions: { color: dotColor.value, type: dotType.value },
-    cornersSquareOptions: { color: dotColor.value, type: cornerType.value === 'dot' ? 'dot' : (cornerType.value === 'extra-rounded' ? 'extra-rounded' : 'square') },
-    cornersDotOptions: { color: dotColor.value, type: cornerType.value === 'dot' ? 'dot' : 'square' },
-    backgroundOptions: { color: bgColor.value },
+    dotsOptions: { color: style.dotColor, type: style.dotType },
+    cornersSquareOptions: { color: style.dotColor, type: style.cornerType === 'dot' ? 'dot' : (style.cornerType === 'extra-rounded' ? 'extra-rounded' : 'square') },
+    cornersDotOptions: { color: style.dotColor, type: style.cornerType === 'dot' ? 'dot' : 'square' },
+    backgroundOptions: { color: style.bgColor },
     ...(useLogo ? { image: logoImage.src, imageOptions: { imageSize: MAX_LOGO_RATIO, margin: 8 } } : {}),
   });
   qr.download({ name: 'qrcode', extension: 'svg' });
@@ -421,9 +500,9 @@ function saveSettings() {
     dotColor: dotColor.value, bgColor: bgColor.value,
     logoEnabled: logoEnabled.checked, bgImageEnabled: bgImageEnabled.checked, bgImageOpacity: bgImageOpacity.value,
     frameEnabled: frameEnabled.checked, frameColor: frameColor.value, frameThickness: frameThickness.value,
-    frameRadius: frameRadius.value, framePadding: framePadding.value,
+    frameRadius: frameRadius.value, framePadding: framePadding.value, frameMargin: frameMargin.value,
     titleEnabled: titleEnabled.checked, titlePosition: titlePosition.value,
-    socialEnabled: socialEnabled.checked,
+    socialEnabled: socialEnabled.checked, styleEnabled: styleEnabled.checked,
   };
   localStorage.setItem('qra-settings', JSON.stringify(s));
 }
@@ -432,6 +511,7 @@ function loadSettings() {
   try { s = JSON.parse(localStorage.getItem('qra-settings')); } catch { return; }
   if (!s) return;
   dataType.value = s.dataType ?? dataType.value;
+  styleEnabled.checked = !!s.styleEnabled;
   dotType.value = s.dotType ?? dotType.value;
   cornerType.value = s.cornerType ?? cornerType.value;
   dotColor.value = s.dotColor ?? dotColor.value;
@@ -444,17 +524,49 @@ function loadSettings() {
   frameThickness.value = s.frameThickness ?? frameThickness.value;
   frameRadius.value = s.frameRadius ?? frameRadius.value;
   framePadding.value = s.framePadding ?? framePadding.value;
+  frameMargin.value = s.frameMargin ?? frameMargin.value;
   titleEnabled.checked = !!s.titleEnabled;
   titlePosition.value = s.titlePosition ?? titlePosition.value;
   socialEnabled.checked = s.socialEnabled !== false;
 
   typeFieldsEls.forEach(el => el.hidden = el.id !== 'fields-' + dataType.value);
+  styleFields.hidden = !styleEnabled.checked;
   logoFields.hidden = !logoEnabled.checked;
   bgImageFields.hidden = !bgImageEnabled.checked;
   frameFields.hidden = !frameEnabled.checked;
   titleFields.hidden = !titleEnabled.checked;
   bgImageOpacityLabel.textContent = bgImageOpacity.value + '%';
+  document.getElementById('dotColorHex').value = dotColor.value;
+  document.getElementById('bgColorHex').value = bgColor.value;
+  document.getElementById('frameColorHex').value = frameColor.value;
 }
+
+// ---------- Click-a-label-to-reset ----------
+const FIELD_DEFAULTS = {
+  dotType: 'square',
+  cornerType: 'square',
+  dotColor: '#000000',
+  bgColor: '#ffffff',
+  frameColor: '#000000',
+  frameThickness: '8',
+  frameRadius: '16',
+  framePadding: '20',
+  frameMargin: '12',
+  titlePosition: 'bottom',
+  bgImageOpacity: '30',
+};
+document.querySelectorAll('.reset-label').forEach(label => {
+  label.addEventListener('click', () => {
+    const id = label.dataset.target;
+    const el = document.getElementById(id);
+    if (!el || !(id in FIELD_DEFAULTS)) return;
+    el.value = FIELD_DEFAULTS[id];
+    const hexEl = document.getElementById(id + 'Hex');
+    if (hexEl) hexEl.value = FIELD_DEFAULTS[id];
+    if (id === 'bgImageOpacity') bgImageOpacityLabel.textContent = FIELD_DEFAULTS[id] + '%';
+    scheduleRender();
+  });
+});
 
 // ---------- Init ----------
 loadSettings();

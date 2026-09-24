@@ -94,6 +94,11 @@ input[type=color] {
   width: 100%; height: 38px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--surface-2); padding: 3px; cursor: pointer;
 }
+.color-row { display: flex; align-items: center; gap: 8px; }
+.color-row input[type=color] { flex: 0 0 46px; width: 46px; padding: 2px; }
+.hex-input { flex: 1; font-family: ui-monospace, monospace; }
+.reset-label { cursor: pointer; user-select: none; }
+.reset-label:hover, .reset-label:active { color: var(--accent); }
 input[type=range] { flex: 1; accent-color: var(--accent); }
 input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .qty-val { font-size: 13px; font-weight: 600; min-width: 38px; text-align: right; }

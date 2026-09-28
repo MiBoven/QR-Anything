@@ -61,40 +61,14 @@
     <input type="url" id="f-url" placeholder="https://example.com">
   </div>
 
-  <div id="fields-wifi" class="type-fields" hidden>
-    <input type="text" id="f-wifi-ssid" placeholder="Network name (SSID)">
-    <input type="text" id="f-wifi-pass" placeholder="Password">
-    <div class="row">
-      <select id="f-wifi-enc">
-        <option value="WPA">WPA/WPA2</option>
-        <option value="WEP">WEP</option>
-        <option value="nopass">No password</option>
-      </select>
-      <label class="checkbox-row"><input type="checkbox" id="f-wifi-hidden"> Hidden network</label>
-    </div>
-  </div>
-
-  <div id="fields-vcard" class="type-fields" hidden>
-    <div class="row"><input type="text" id="f-vc-first" placeholder="First name"><input type="text" id="f-vc-last" placeholder="Last name"></div>
-    <input type="text" id="f-vc-org" placeholder="Organization (optional)">
-    <input type="tel" id="f-vc-phone" placeholder="Phone (optional)">
-    <input type="email" id="f-vc-email" placeholder="E-mail (optional)">
-    <input type="url" id="f-vc-url" placeholder="Website (optional)">
-  </div>
-
-  <div id="fields-email" class="type-fields" hidden>
-    <input type="email" id="f-em-to" placeholder="Recipient address">
-    <input type="text" id="f-em-subject" placeholder="Subject (optional)">
-    <textarea id="f-em-body" rows="2" placeholder="Message (optional)"></textarea>
-  </div>
-
   <div id="fields-phone" class="type-fields" hidden>
     <input type="tel" id="f-phone" placeholder="+49 123 4567890">
   </div>
 
-  <div id="fields-sms" class="type-fields" hidden>
-    <input type="tel" id="f-sms-number" placeholder="+49 123 4567890">
-    <textarea id="f-sms-body" rows="2" placeholder="Message (optional)"></textarea>
+  <!-- Multi-field types (Wi-Fi, contact, e-mail, SMS) show one summary field + a button for the full form -->
+  <div id="summaryRow" class="summary-row" hidden>
+    <input type="text" id="contentSummary" readonly>
+    <button type="button" id="openDetailsBtn" class="secondary">Details</button>
   </div>
 </div>
 
@@ -196,18 +170,30 @@
     <div class="row">
       <div class="field">
         <label class="label-sub reset-label" data-target="frameColor" title="Click to reset">Color</label>
-        <div class="color-row" id="frameColorRow">
-          <input type="color" id="frameColor" value="#000000">
-          <input type="text" id="frameColorHex" class="hex-input" value="#000000" maxlength="7">
+        <div class="color-sync-row">
+          <div class="color-row" id="frameColorRow">
+            <input type="color" id="frameColor" value="#000000">
+            <input type="text" id="frameColorHex" class="hex-input" value="#000000" maxlength="7">
+          </div>
+          <label class="checkbox-row"><input type="checkbox" id="frameColorSync"> Same as code color</label>
         </div>
-        <label class="checkbox-row" style="margin-top:6px;"><input type="checkbox" id="frameColorSync"> Same as code color</label>
       </div>
+    </div>
+    <div class="row">
       <div class="field">
         <label class="label-sub reset-label" data-target="frameThickness" title="Click to reset">Thickness</label>
         <div class="stepper">
           <button type="button" class="stepper-btn" data-target="frameThickness" data-step="-1">−</button>
           <input type="number" id="frameThickness" min="1" max="40" value="8">
           <button type="button" class="stepper-btn" data-target="frameThickness" data-step="1">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label-sub reset-label" data-target="frameRadius" title="Click to reset">Corner radius</label>
+        <div class="stepper">
+          <button type="button" class="stepper-btn" data-target="frameRadius" data-step="-1">−</button>
+          <input type="number" id="frameRadius" min="0" max="100" value="16">
+          <button type="button" class="stepper-btn" data-target="frameRadius" data-step="1">+</button>
         </div>
       </div>
     </div>
@@ -226,16 +212,6 @@
           <button type="button" class="stepper-btn" data-target="frameMargin" data-step="-1">−</button>
           <input type="number" id="frameMargin" min="0" max="100" value="12">
           <button type="button" class="stepper-btn" data-target="frameMargin" data-step="1">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="field">
-        <label class="label-sub reset-label" data-target="frameRadius" title="Click to reset">Corner radius</label>
-        <div class="stepper">
-          <button type="button" class="stepper-btn" data-target="frameRadius" data-step="-1">−</button>
-          <input type="number" id="frameRadius" min="0" max="100" value="16">
-          <button type="button" class="stepper-btn" data-target="frameRadius" data-step="1">+</button>
         </div>
       </div>
     </div>
@@ -274,7 +250,43 @@
 <div id="scanResult" class="scan-result" hidden></div>
 <button id="scanTestBtn" class="secondary full">Run scan test</button>
 
-<footer>QR Anything · v0.1.4</footer>
+<footer>QR Anything · v0.1.5</footer>
+
+<!-- ========== Details modal (full form for multi-field content types) ========== -->
+<div class="modal-bg" id="detailsModalBg">
+  <div class="modal">
+    <h2 id="detailsTitle">Details</h2>
+  <div id="fields-wifi" class="type-fields" hidden>
+    <input type="text" id="f-wifi-ssid" placeholder="Network name (SSID)">
+    <input type="text" id="f-wifi-pass" placeholder="Password">
+    <div class="row">
+      <select id="f-wifi-enc">
+        <option value="WPA">WPA/WPA2</option>
+        <option value="WEP">WEP</option>
+        <option value="nopass">No password</option>
+      </select>
+      <label class="checkbox-row"><input type="checkbox" id="f-wifi-hidden"> Hidden network</label>
+    </div>
+  </div>
+  <div id="fields-vcard" class="type-fields" hidden>
+    <div class="row"><input type="text" id="f-vc-first" placeholder="First name"><input type="text" id="f-vc-last" placeholder="Last name"></div>
+    <input type="text" id="f-vc-org" placeholder="Organization (optional)">
+    <input type="tel" id="f-vc-phone" placeholder="Phone (optional)">
+    <input type="email" id="f-vc-email" placeholder="E-mail (optional)">
+    <input type="url" id="f-vc-url" placeholder="Website (optional)">
+  </div>
+  <div id="fields-email" class="type-fields" hidden>
+    <input type="email" id="f-em-to" placeholder="Recipient address">
+    <input type="text" id="f-em-subject" placeholder="Subject (optional)">
+    <textarea id="f-em-body" rows="2" placeholder="Message (optional)"></textarea>
+  </div>
+  <div id="fields-sms" class="type-fields" hidden>
+    <input type="tel" id="f-sms-number" placeholder="+49 123 4567890">
+    <textarea id="f-sms-body" rows="2" placeholder="Message (optional)"></textarea>
+  </div>
+    <button class="close" id="closeDetailsModal">Done</button>
+  </div>
+</div>
 
 <!-- ========== Settings modal ========== -->
 <div class="modal-bg" id="settingsModalBg">
@@ -291,7 +303,7 @@
   <div class="modal">
     <h2>About QR Anything</h2>
     <p>QR Anything — Give me a Quick Response!<br>
-    Version 0.1.4</p>
+    Version 0.1.5</p>
     <p class="hint">Creates styled QR codes for text, links, Wi-Fi, contacts and more — entirely in your browser. Nothing is ever uploaded.</p>
     <button class="close" id="closeAboutModal">Close</button>
   </div>

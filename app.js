@@ -50,8 +50,53 @@ document.getElementById('resetSettingsBtn').addEventListener('click', () => {
 // ---------- Data type fields ----------
 const dataType = document.getElementById('dataType');
 const typeFieldsEls = document.querySelectorAll('.type-fields');
+const summaryRow = document.getElementById('summaryRow');
+const contentSummary = document.getElementById('contentSummary');
+const openDetailsBtn = document.getElementById('openDetailsBtn');
+const detailsModalBg = document.getElementById('detailsModalBg');
+const detailsTitle = document.getElementById('detailsTitle');
+
+// Content types with several fields: one summary field in the card, full form in a modal
+const MULTI_TYPES = {
+  wifi:  { title: 'Wi-Fi network',   button: 'Details',   placeholder: 'Network name…' },
+  vcard: { title: 'Contact (vCard)', button: 'Show card', placeholder: 'Contact name…' },
+  email: { title: 'E-mail',          button: 'Details',   placeholder: 'Recipient…' },
+  sms:   { title: 'SMS',             button: 'Details',   placeholder: 'Phone number…' },
+};
+
+function getSummaryText() {
+  const v = id => document.getElementById(id).value.trim();
+  switch (dataType.value) {
+    case 'wifi':  return v('f-wifi-ssid');
+    case 'vcard': return (v('f-vc-first') + ' ' + v('f-vc-last')).trim();
+    case 'email': return v('f-em-to');
+    case 'sms':   return v('f-sms-number');
+  }
+  return '';
+}
+function updateSummary() {
+  contentSummary.value = getSummaryText();
+}
+function updateContentUI() {
+  const type = dataType.value;
+  const multi = MULTI_TYPES[type];
+  typeFieldsEls.forEach(el => el.hidden = el.id !== 'fields-' + type);
+  summaryRow.hidden = !multi;
+  if (multi) {
+    detailsTitle.textContent = multi.title;
+    openDetailsBtn.textContent = multi.button;
+    contentSummary.placeholder = multi.placeholder;
+    updateSummary();
+  }
+}
+function openDetails() { detailsModalBg.classList.add('open'); }
+openDetailsBtn.addEventListener('click', openDetails);
+contentSummary.addEventListener('click', openDetails);
+document.getElementById('closeDetailsModal').addEventListener('click', () => detailsModalBg.classList.remove('open'));
+detailsModalBg.addEventListener('click', (e) => { if (e.target === detailsModalBg) detailsModalBg.classList.remove('open'); });
+
 dataType.addEventListener('change', () => {
-  typeFieldsEls.forEach(el => el.hidden = el.id !== 'fields-' + dataType.value);
+  updateContentUI();
   scheduleRender();
 });
 
@@ -259,7 +304,9 @@ socialEnabled.addEventListener('change', scheduleRender);
 
 // ---------- Data field inputs ----------
 document.querySelectorAll('#fields-text, #fields-url, #fields-wifi, #fields-vcard, #fields-email, #fields-phone, #fields-sms')
-  .forEach(section => section.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('input', scheduleRender)));
+  .forEach(section => section.querySelectorAll('input, textarea, select').forEach(el => {
+    el.addEventListener('input', () => { updateSummary(); scheduleRender(); });
+  }));
 
 // ---------- QR base size / constants ----------
 const QR_SIZE = 600;             // base QR module area in px
@@ -605,7 +652,7 @@ function loadSettings() {
   socialEnabled.checked = s.socialEnabled !== false;
   setDataFieldValues(s.dataFields);
 
-  typeFieldsEls.forEach(el => el.hidden = el.id !== 'fields-' + dataType.value);
+  updateContentUI();
   styleFields.hidden = !styleEnabled.checked;
   logoFields.hidden = !logoEnabled.checked;
   bgImageFields.hidden = !bgImageEnabled.checked;
@@ -647,6 +694,7 @@ document.querySelectorAll('.reset-label').forEach(label => {
 
 // ---------- Init ----------
 loadSettings();
+updateContentUI();
 render();
 
 if ('serviceWorker' in navigator) {

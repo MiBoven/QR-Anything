@@ -34,6 +34,7 @@
         <span id="darkModeLabel">Dark mode</span>
         <span class="switch" id="darkModeSwitch"></span>
       </button>
+      <button class="dropdown-item" id="copyIframeBtn">Copy iframe code</button>
       <button class="dropdown-item" id="settingsOpen">Settings</button>
       <button class="dropdown-item" id="aboutOpen">About</button>
     </div>
@@ -80,7 +81,18 @@
     <button id="downloadPng">Download PNG</button>
     <button id="downloadJpg">Download JPG</button>
   </div>
-  <button id="downloadSvg" class="secondary full">Download SVG (code only)</button>
+  <button id="downloadSvg" class="secondary full">Download SVG (QR code only)</button>
+  <div class="row export-size-row">
+    <label class="label-sub reset-label" data-target="exportSize" title="Click to reset" style="margin:0;min-width:70px;">QR size</label>
+    <select id="exportSize">
+      <option value="600" selected>600 px (default)</option>
+      <option value="1000">1000 px</option>
+      <option value="1500">1500 px</option>
+      <option value="2000">2000 px</option>
+      <option value="3000">3000 px</option>
+      <option value="4000">4000 px</option>
+    </select>
+  </div>
 </div>
 </div>
 
@@ -250,7 +262,7 @@
 <div id="scanResult" class="scan-result" hidden></div>
 <button id="scanTestBtn" class="secondary full">Run scan test</button>
 
-<footer>QR Anything · v0.1.5</footer>
+<footer>QR Anything · v0.1.6</footer>
 
 <!-- ========== Details modal (full form for multi-field content types) ========== -->
 <div class="modal-bg" id="detailsModalBg">
@@ -303,11 +315,18 @@
   <div class="modal">
     <h2>About QR Anything</h2>
     <p>QR Anything — Give me a Quick Response!<br>
-    Version 0.1.5</p>
+    Version 0.1.6</p>
     <p class="hint">Creates styled QR codes for text, links, Wi-Fi, contacts and more — entirely in your browser. Nothing is ever uploaded.</p>
     <button class="close" id="closeAboutModal">Close</button>
   </div>
 </div>
+
+<!-- ========== Lightbox (tap the QR code) ========== -->
+<div class="lightbox" id="lightbox" hidden>
+  <img id="lightboxImg" alt="QR code">
+</div>
+
+<div class="toast" id="toast" hidden></div>
 
 <script src="vendor/qr-code-styling/qr-code-styling.js"></script>
 <script src="vendor/jsqr/jsQR.js"></script>

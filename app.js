@@ -356,7 +356,10 @@ const previewCanvas = document.getElementById('previewCanvas');
 let renderTimer = null;
 function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 150); }
 
+let renderSeq = 0;
+
 async function render() {
+  const seq = ++renderSeq; // lets us drop results of superseded (older) renders
   const dataStr = buildData();
   document.getElementById('scanResult').hidden = true;
 
@@ -365,25 +368,58 @@ async function render() {
   socialCard.hidden = !social;
   if (social) socialLabel.textContent = `${social.label} logo detected`;
 
-  const useLogo = logoEnabled.checked && logoImage;
-  const style = getStyleValues();
-
   // No content yet: show a friendly placeholder instead of attempting to
   // encode an empty string (which isn't valid per the QR standard).
   if (!dataStr) {
     drawPlaceholder('🐒', 'Hier erscheint dein QR-Code, sobald du oben etwas eingibst.');
-    render.isPlaceholder = true;
+    setPlaceholderState(true);
     saveSettings();
     return;
   }
 
-  // 1. Render the pure, styled QR code via qr-code-styling into an offscreen container
+  const work = document.createElement('canvas');
+  const ok = await composeQR(work, QR_SIZE);
+  if (seq !== renderSeq) return; // a newer render took over
+
+  if (!ok) {
+    drawPlaceholder('⚠️', 'Dieser Inhalt kann nicht als QR-Code kodiert werden — bitte kürzen.');
+    setPlaceholderState(true);
+    saveSettings();
+    return;
+  }
+
+  previewCanvas.width = work.width;
+  previewCanvas.height = work.height;
+  previewCanvas.getContext('2d').drawImage(work, 0, 0);
+  render.lastData = dataStr;
+  setPlaceholderState(false);
+  saveSettings();
+}
+
+function setPlaceholderState(flag) {
+  render.isPlaceholder = flag;
+  previewCanvas.style.cursor = flag ? 'default' : 'zoom-in';
+}
+
+// Draws the complete composition (background image, QR, frame, badge, title)
+// onto `canvas` at the given QR size. Everything scales with size / QR_SIZE,
+// so the preview (600) and high-resolution exports look identical.
+async function composeQR(canvas, size) {
+  const dataStr = buildData();
+  if (!dataStr) return false;
+  const k = size / QR_SIZE;
+  const S = v => Math.round(v * k);
+  const useLogo = logoEnabled.checked && logoImage;
+  const style = getStyleValues();
+  const social = detectSocial(dataStr);
+
+  // 1. The pure, styled QR code via qr-code-styling
   const qrOptions = {
-    width: QR_SIZE,
-    height: QR_SIZE,
+    width: size,
+    height: size,
     type: 'canvas',
     data: dataStr,
-    margin: 4,
+    margin: S(4),
     qrOptions: { errorCorrectionLevel: useLogo ? 'H' : 'Q' },
     dotsOptions: { color: style.dotColor, type: style.dotType },
     cornersSquareOptions: { color: style.dotColor, type: style.cornerType === 'dot' ? 'dot' : (style.cornerType === 'extra-rounded' ? 'extra-rounded' : 'square') },
@@ -392,51 +428,43 @@ async function render() {
   };
   if (useLogo) {
     qrOptions.image = logoImage.src;
-    qrOptions.imageOptions = { imageSize: MAX_LOGO_RATIO, margin: 8, crossOrigin: 'anonymous' };
+    qrOptions.imageOptions = { imageSize: MAX_LOGO_RATIO, margin: S(8), crossOrigin: 'anonymous' };
   }
 
-  let qrCanvas = null;
+  let qrBitmap = null;
   try {
-    const holder = document.createElement('div');
     const qr = new QRCodeStyling(qrOptions);
-    qr.append(holder);
-    await new Promise(r => setTimeout(r, 30)); // let the library finish drawing
-    qrCanvas = holder.querySelector('canvas');
+    const blob = await qr.getRawData('png'); // waits until the library has finished drawing
+    if (!blob) return false;
+    qrBitmap = await createImageBitmap(blob);
   } catch (err) {
-    qrCanvas = null; // e.g. content too long for the encoder to handle
+    return false; // e.g. content too long for the encoder, or size too large for this device
   }
 
-  if (!qrCanvas) {
-    drawPlaceholder('⚠️', 'Dieser Inhalt kann nicht als QR-Code kodiert werden — bitte kürzen.');
-    render.isPlaceholder = true;
-    saveSettings();
-    return;
-  }
-
-  // 2. Compose: background image -> QR -> frame -> title, onto the master canvas
-  const pad = frameEnabled.checked ? Number(framePadding.value) : 0;
-  const frameW = frameEnabled.checked ? Number(frameThickness.value) : 0;
-  const margin = frameEnabled.checked ? Number(frameMargin.value) : 0;
-  const frameBlockSize = QR_SIZE + pad * 2 + frameW * 2; // QR + padding + frame stroke, no outer margin
-  const innerSize = frameBlockSize + margin * 2;          // + the blank margin around the frame
+  // 2. Compose: background image -> frame -> QR -> badge -> title
+  const pad = frameEnabled.checked ? S(Number(framePadding.value)) : 0;
+  const frameW = frameEnabled.checked ? S(Number(frameThickness.value)) : 0;
+  const margin = frameEnabled.checked ? S(Number(frameMargin.value)) : 0;
+  const frameBlockSize = size + pad * 2 + frameW * 2; // QR + padding + frame stroke, no outer margin
+  const innerSize = frameBlockSize + margin * 2;      // + the blank margin around the frame
 
   const hasTitle = titleEnabled.checked && titleText.value.trim();
   const titlePos = titlePosition.value;
-  const titleSpace = hasTitle ? 64 : 0;
+  const titleSpace = hasTitle ? S(64) : 0;
   const horizontalTitle = hasTitle && (titlePos === 'left' || titlePos === 'right');
 
   const finalW = innerSize + (horizontalTitle ? titleSpace : 0);
   const finalH = innerSize + (!horizontalTitle && hasTitle ? titleSpace : 0);
 
-  previewCanvas.width = finalW;
-  previewCanvas.height = finalH;
-  const ctx = previewCanvas.getContext('2d');
+  canvas.width = finalW;
+  canvas.height = finalH;
+  const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, finalW, finalH);
   ctx.fillStyle = style.bgColor;
   ctx.fillRect(0, 0, finalW, finalH);
 
-  let qrOriginX = hasTitle && titlePos === 'left' ? titleSpace : 0;
-  let qrOriginY = hasTitle && titlePos === 'top' ? titleSpace : 0;
+  const qrOriginX = hasTitle && titlePos === 'left' ? titleSpace : 0;
+  const qrOriginY = hasTitle && titlePos === 'top' ? titleSpace : 0;
 
   // background image (behind the code, confined to the frame block — not the outer margin)
   if (bgImageEnabled.checked && backgroundImage) {
@@ -448,45 +476,50 @@ async function render() {
 
   // frame
   if (frameEnabled.checked) {
-    const r = Number(frameRadius.value);
+    const r = S(Number(frameRadius.value));
     roundRectStroke(ctx, qrOriginX + margin + frameW / 2, qrOriginY + margin + frameW / 2, frameBlockSize - frameW, frameBlockSize - frameW, r, getFrameColor(style), frameW);
   }
 
   // the QR code itself
-  ctx.drawImage(qrCanvas, qrOriginX + margin + frameW + pad, qrOriginY + margin + frameW + pad, QR_SIZE, QR_SIZE);
+  ctx.drawImage(qrBitmap, qrOriginX + margin + frameW + pad, qrOriginY + margin + frameW + pad, size, size);
+  qrBitmap.close();
 
-  // social platform logo badge next to the title
+  // social platform logo badge
   if (social && socialEnabled.checked) {
     const badge = new Image();
     badge.src = `icons/social/${social.key}.svg`;
     await new Promise(res => { badge.onload = res; badge.onerror = res; });
     if (badge.width) {
-      const bs = 28;
-      ctx.drawImage(badge, qrOriginX + innerSize - bs - 6, qrOriginY + 6, bs, bs);
+      const bs = S(28);
+      ctx.drawImage(badge, qrOriginX + innerSize - bs - S(6), qrOriginY + S(6), bs, bs);
     }
   }
 
   // title
   if (hasTitle) {
     ctx.fillStyle = style.dotColor;
-    ctx.font = '600 28px -apple-system, "Segoe UI", Roboto, sans-serif';
+    ctx.font = `600 ${S(28)}px -apple-system, "Segoe UI", Roboto, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const text = titleText.value.trim();
-    if (titlePos === 'top') ctx.fillText(text, finalW / 2, titleSpace / 2, finalW - 20);
-    else if (titlePos === 'bottom') ctx.fillText(text, finalW / 2, innerSize + titleSpace / 2, finalW - 20);
+    const maxW = S(20);
+    if (titlePos === 'top') ctx.fillText(text, finalW / 2, titleSpace / 2, finalW - maxW);
+    else if (titlePos === 'bottom') ctx.fillText(text, finalW / 2, innerSize + titleSpace / 2, finalW - maxW);
     else if (titlePos === 'left') {
       ctx.save(); ctx.translate(titleSpace / 2, finalH / 2); ctx.rotate(-Math.PI / 2);
-      ctx.fillText(text, 0, 0, finalH - 20); ctx.restore();
+      ctx.fillText(text, 0, 0, finalH - maxW); ctx.restore();
     } else if (titlePos === 'right') {
       ctx.save(); ctx.translate(innerSize + titleSpace / 2, finalH / 2); ctx.rotate(Math.PI / 2);
-      ctx.fillText(text, 0, 0, finalH - 20); ctx.restore();
+      ctx.fillText(text, 0, 0, finalH - maxW); ctx.restore();
     }
   }
+  return true;
+}
 
-  render.lastData = dataStr;
-  render.isPlaceholder = false;
-  saveSettings();
+// Renders the composition into a fresh canvas at any size (used for exports / lightbox)
+async function exportCanvas(size) {
+  const c = document.createElement('canvas');
+  return (await composeQR(c, size)) ? c : null;
 }
 
 function drawImageCover(ctx, img, x, y, w, h) {
@@ -534,7 +567,21 @@ document.getElementById('scanTestBtn').addEventListener('click', () => {
   }
 });
 
+// ---------- Toast ----------
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg, ms = 2200) {
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.hidden = true; }, ms);
+}
+function hideToast() { clearTimeout(toastTimer); toastEl.hidden = true; }
+
 // ---------- Export ----------
+const exportSize = document.getElementById('exportSize');
+exportSize.addEventListener('change', saveSettings);
+
 function sanitizeFilenamePart(s) {
   return (s || '').replace(/[\\/:*?"<>|]/g, '').trim().replace(/\s+/g, '_');
 }
@@ -558,22 +605,33 @@ function buildDownloadName() {
   return `qr-code--${base || 'code'}`;
 }
 
-function downloadCanvas(mime, ext) {
-  previewCanvas.toBlob(blob => {
+async function downloadImage(mime, ext) {
+  if (render.isPlaceholder) { showToast('Enter content first'); return; }
+  const size = Number(exportSize.value) || QR_SIZE;
+  let canvas = previewCanvas;
+  if (size !== QR_SIZE) {
+    showToast('Creating image…', 30000);
+    canvas = await exportCanvas(size);
+    if (!canvas) { showToast('Could not create an image at this size'); return; }
+  }
+  canvas.toBlob(blob => {
+    if (!blob) { showToast('Size too large for this device — try a smaller one'); return; }
+    hideToast();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `${buildDownloadName()}.${ext}`;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }, mime, 0.95);
 }
-document.getElementById('downloadPng').addEventListener('click', () => downloadCanvas('image/png', 'png'));
-document.getElementById('downloadJpg').addEventListener('click', () => downloadCanvas('image/jpeg', 'jpg'));
-document.getElementById('downloadSvg').addEventListener('click', () => {
-  const dataStr = buildData();
-  if (!dataStr) return;
+document.getElementById('downloadPng').addEventListener('click', () => downloadImage('image/png', 'png'));
+document.getElementById('downloadJpg').addEventListener('click', () => downloadImage('image/jpeg', 'jpg'));
+
+// Vector version of the plain styled code (no frame/title/background)
+function makeSvgQR(dataStr) {
   const useLogo = logoEnabled.checked && logoImage;
   const style = getStyleValues();
-  const qr = new QRCodeStyling({
+  return new QRCodeStyling({
     width: QR_SIZE, height: QR_SIZE, type: 'svg', data: dataStr, margin: 4,
     qrOptions: { errorCorrectionLevel: useLogo ? 'H' : 'Q' },
     dotsOptions: { color: style.dotColor, type: style.dotType },
@@ -582,9 +640,69 @@ document.getElementById('downloadSvg').addEventListener('click', () => {
     backgroundOptions: { color: style.bgColor },
     ...(useLogo ? { image: logoImage.src, imageOptions: { imageSize: MAX_LOGO_RATIO, margin: 8 } } : {}),
   });
-  qr.download({ name: buildDownloadName(), extension: 'svg' });
+}
+document.getElementById('downloadSvg').addEventListener('click', () => {
+  const dataStr = buildData();
+  if (!dataStr) { showToast('Enter content first'); return; }
+  makeSvgQR(dataStr).download({ name: buildDownloadName(), extension: 'svg' });
 });
 
+// ---------- Copy iframe code (menu) ----------
+// An <iframe> whose srcdoc contains the QR code as an inline SVG, ready to paste into any website.
+async function buildIframeCode() {
+  const blob = await makeSvgQR(buildData()).getRawData('svg');
+  let svg = await blob.text();
+  svg = svg.replace(/<\?xml[^>]*\?>\s*/, '').replace(/<!DOCTYPE[^>]*>\s*/, '').replace(/\r?\n\s*/g, '').trim();
+  const doc = '<!DOCTYPE html><style>html,body{margin:0}svg{display:block;width:100%;height:auto}</style>' + svg;
+  const escaped = doc.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  return `<iframe title="QR code" width="300" height="300" style="border:0" srcdoc="${escaped}"></iframe>`;
+}
+
+// Safari only allows clipboard writes inside the click gesture, so hand it a promise
+async function copyText(textPromise) {
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain': textPromise.then(t => new Blob([t], { type: 'text/plain' })),
+      })]);
+      return true;
+    } catch (err) { /* fall through to writeText */ }
+  }
+  try {
+    await navigator.clipboard.writeText(await textPromise);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+document.getElementById('copyIframeBtn').addEventListener('click', async () => {
+  dropdownMenu.hidden = true;
+  if (!buildData()) { showToast('Enter content first'); return; }
+  const ok = await copyText(buildIframeCode());
+  showToast(ok ? 'iframe code copied' : 'Could not copy — please try again');
+});
+
+// ---------- Lightbox: tap the QR code to view it large ----------
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+let lightboxUrl = null;
+previewCanvas.addEventListener('click', async () => {
+  if (render.isPlaceholder) return;
+  const big = (await exportCanvas(1200)) || previewCanvas; // crisper than the small preview
+  big.toBlob(blob => {
+    if (!blob) return;
+    lightboxUrl = URL.createObjectURL(blob);
+    lightboxImg.src = lightboxUrl;
+    lightbox.hidden = false;
+  });
+});
+function closeLightbox() {
+  lightbox.hidden = true;
+  lightboxImg.removeAttribute('src');
+  if (lightboxUrl) { URL.revokeObjectURL(lightboxUrl); lightboxUrl = null; }
+}
+lightbox.addEventListener('click', closeLightbox);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lightbox.hidden) closeLightbox(); });
 
 // ---------- Settings persistence ----------
 const DATA_FIELD_IDS = [
@@ -623,6 +741,7 @@ function saveSettings() {
     frameRadius: frameRadius.value, framePadding: framePadding.value, frameMargin: frameMargin.value,
     titleEnabled: titleEnabled.checked, titlePosition: titlePosition.value,
     socialEnabled: socialEnabled.checked, styleEnabled: styleEnabled.checked,
+    exportSize: exportSize.value,
     dataFields: getDataFieldValues(),
   };
   localStorage.setItem('qra-settings', JSON.stringify(s));
@@ -650,6 +769,7 @@ function loadSettings() {
   titleEnabled.checked = !!s.titleEnabled;
   titlePosition.value = s.titlePosition ?? titlePosition.value;
   socialEnabled.checked = s.socialEnabled !== false;
+  exportSize.value = s.exportSize ?? exportSize.value;
   setDataFieldValues(s.dataFields);
 
   updateContentUI();
@@ -678,6 +798,7 @@ const FIELD_DEFAULTS = {
   frameMargin: '12',
   titlePosition: 'bottom',
   bgImageOpacity: '30',
+  exportSize: '600',
 };
 document.querySelectorAll('.reset-label').forEach(label => {
   label.addEventListener('click', () => {

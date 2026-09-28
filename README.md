@@ -16,7 +16,7 @@ A tiny, privacy-friendly web app that turns text, links, Wi-Fi credentials, cont
 - **Frame:** a simple border around the code with adjustable color, thickness, corner radius and padding
 - **Title:** optional text above, below, left or right of the code (fixed font for now — font choice is planned for a later version)
 - **Automatic platform-logo detection:** if the content links to a known platform (Instagram, YouTube, TikTok, Facebook, X, WhatsApp, LinkedIn, Spotify, GitHub, Pinterest, Snapchat, Threads), a small brand logo is placed next to the title automatically. Can be switched off per code
-- **Export:** PNG and JPG (full composition including frame/title/background). SVG export is available for the plain styled QR code itself (frame/title/background compositing is raster-only for now — see "On the horizon")
+- **Export:** PNG and JPG of the full composition (frame/title/background), selectable QR size from 600 px (default) up to 4000 px. SVG export and a "Copy iframe code" menu entry for the plain styled QR code (frame/title/background compositing is raster-only for now — see "On the horizon")
 - Settings (style, frame, title, etc.) are remembered locally between visits
 - Installable as a PWA with offline support
 - Dark mode by default, with a light mode toggle
@@ -94,19 +94,25 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
-### 0.1.5 — 28.09.2026 — Single content field, frame layout
+### 0.1.6 — 2026-09-28 — Lightbox, hi-res export, iframe code
+- Tapping the QR code opens it centered on a darkened background (like an image viewer); tapping anywhere closes it again
+- PNG/JPG can now be downloaded in higher resolution (QR size 600 px by default, up to 4000 px); frame, title and badge scale along
+- New "Copy iframe code" entry in the menu: copies an `<iframe>` that displays the QR code as an inline SVG (plain code only, no frame/title/background), ready to paste into a website
+- Button label changed to "Download SVG (QR code only)"
+
+### 0.1.5 — 2026-09-28 — Single content field, frame layout
 - QR content: more space between the dropdown and the input field
 - QR content: only one field is shown at a time. For multi-field types (Wi-Fi, contact, e-mail, SMS) the card shows just a summary (network name, contact name, recipient or number) with a button next to it that opens the full form
 - Frame: the "Same as code color" checkbox now sits to the right of the color picker; Thickness and Corner radius share a row below it, followed by Padding and Margin
 
-### 0.1.4 — 24.09.2026 — Frame color sync, steppers, persistence, filenames
+### 0.1.4 — 2026-09-24 — Frame color sync, steppers, persistence, filenames
 - Frame color now has a "Same as code color" checkbox; when on, the color picker is hidden and the frame follows the code color automatically
 - Frame's Padding and Margin fields now sit side by side
 - All Frame number fields (thickness, padding, margin, corner radius) got +/− stepper buttons, since native number-input arrows aren't always available on mobile
 - The entered content (text, link, Wi-Fi, contact, etc.) is now saved locally too, so the QR code reappears correctly after the page reloads (e.g. after switching apps and back) instead of only the style settings
 - Downloaded files are now named descriptively instead of always "qrcode": `qr-code--<first 20 characters of the content>`, or for links `qr-code--www--<first 15 characters after the last "#" or "/" (# takes priority)>`
 
-### 0.1.3 — 24.09.2026 — Style toggle, layout & frame refinements
+### 0.1.3 — 2026-09-24 — Style toggle, layout & frame refinements
 - "Style" renamed to "Adjust style" and made checkbox-toggleable, like the other optional sections — when off, a plain black-on-white square code is used
 - Download buttons (PNG/JPG/SVG) moved directly under the QR code; "Run scan test" moved to the very bottom of the page
 - Frame gained an adjustable outer margin (space between the frame and the image edge), alongside the existing inside padding
@@ -117,11 +123,11 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 ### 0.1.2 — [DATUM einfügen] — Live preview on mobile
 - On phone-sized screens, the live preview now stays pinned at the top of the screen while the rest of the settings scroll underneath, so style changes are visible immediately
 
-### 0.1.1 — 22.09.2026 — Icon path fixes
+### 0.1.1 — 2026-09-22 — Icon path fixes
 - Favicon/app-icon references in `index.html` and `manifest.json` corrected to match the suite's folder convention: `favicon-16x16.png`, `favicon-32x32.png` and `apple-touch-icon.png` now live under `/icons/`, while `icon-192.png` and `icon-512.png` stay at the repo root (required for the Chrome install prompt)
 - No functional changes to QR generation
 
-### 0.1.0 — 21.09.2026 — Initial release
+### 0.1.0 — 2026-09-21 — Initial release
 - Content types: plain text, links, Wi-Fi, vCard, e-mail, phone, SMS
 - Dot and corner shape styling, custom code/background colors
 - Center logo embedding with automatic high error correction and size cap

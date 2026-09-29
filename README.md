@@ -16,7 +16,7 @@ A tiny, privacy-friendly web app that turns text, links, Wi-Fi credentials, cont
 - **Frame:** a simple border around the code with adjustable color, thickness, corner radius and padding
 - **Title:** optional text above, below, left or right of the code (fixed font for now — font choice is planned for a later version)
 - **Automatic platform-logo detection:** if the content links to a known platform (Instagram, YouTube, TikTok, Facebook, X, WhatsApp, LinkedIn, Spotify, GitHub, Pinterest, Snapchat, Threads), a small brand logo is placed next to the title automatically. Can be switched off per code
-- **Export:** PNG and JPG of the full composition (frame/title/background), selectable QR size from 600 px (default) up to 4000 px. SVG export and a "Copy iframe code" menu entry for the plain styled QR code (frame/title/background compositing is raster-only for now — see "On the horizon")
+- **Export:** PNG and JPG of the full composition (frame/title/background), selectable QR size from 600 px (default) up to 4000 px, via a compact export menu. SVG export and a "Copy iframe code" option for the plain styled QR code live in the same menu
 - Settings (style, frame, title, etc.) are remembered locally between visits
 - Installable as a PWA with offline support
 - Dark mode by default, with a light mode toggle
@@ -93,6 +93,12 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 - Additional content types (calendar events, geo-location)
 
 ## Changelog
+
+### 0.1.7 — 2026-09-28 — Character limit, export menu, collapsible preview
+- QR content: a character counter now appears once fewer than 10 characters remain — neutral at 10–6, orange/yellow at 5–0, and red with "X zu viel" once the limit is exceeded. The limit depends on the error-correction level, which is lower when a center logo is enabled (1273 vs. 1663 characters)
+- Content that's too long now shows 🥵 in the preview instead of the generic warning icon
+- Below the QR code, only "Download PNG" and "Download JPG" remain visible, plus a "⋮" button that opens a menu with "Download SVG", "Copy iframe code" (moved out of the main menu) and the QR-size selector; added spacing between the download row and the QR preview
+- The QR preview card can now be collapsed/expanded via a small toggle in its corner
 
 ### 0.1.6 — 2026-09-28 — Lightbox, hi-res export, iframe code
 - Tapping the QR code opens it centered on a darkened background (like an image viewer); tapping anywhere closes it again

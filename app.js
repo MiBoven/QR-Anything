@@ -14,13 +14,22 @@ function setTheme(t) {
 setTheme(localStorage.getItem('qra-theme') || 'dark');
 
 // ---------- Header: menu / fullscreen / brand ----------
-const menuToggle = document.getElementById('menuToggle');
-const dropdownMenu = document.getElementById('dropdownMenu');
-menuToggle.addEventListener('click', () => { dropdownMenu.hidden = !dropdownMenu.hidden; });
+function wireDropdown(toggleId, menuId) {
+  const toggle = document.getElementById(toggleId);
+  const menu = document.getElementById(menuId);
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    document.querySelectorAll('.dropdown').forEach(m => { m.hidden = true; });
+    menu.hidden = !willOpen;
+  });
+  return menu;
+}
+const dropdownMenu = wireDropdown('menuToggle', 'dropdownMenu');
 document.addEventListener('click', (e) => {
-  if (!dropdownMenu.hidden && !dropdownMenu.contains(e.target) && e.target !== menuToggle) {
-    dropdownMenu.hidden = true;
-  }
+  document.querySelectorAll('.dropdown').forEach(menu => {
+    if (!menu.hidden && !menu.contains(e.target)) menu.hidden = true;
+  });
 });
 document.getElementById('darkModeToggle').addEventListener('click', () => {
   setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
@@ -356,6 +365,43 @@ const previewCanvas = document.getElementById('previewCanvas');
 let renderTimer = null;
 function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 150); }
 
+// ---------- Collapsible preview ----------
+const previewCollapseToggle = document.getElementById('previewCollapseToggle');
+const previewCollapsible = document.getElementById('previewCollapsible');
+const previewCollapseIcon = document.getElementById('previewCollapseIcon');
+function setPreviewCollapsed(collapsed) {
+  previewCollapsible.hidden = collapsed;
+  previewCollapseIcon.textContent = collapsed ? '▸' : '▾';
+  previewCollapseToggle.title = collapsed ? 'Expand preview' : 'Collapse preview';
+}
+previewCollapseToggle.addEventListener('click', () => {
+  setPreviewCollapsed(!previewCollapsible.hidden);
+  saveSettings();
+});
+
+// Real QR byte-capacity ceilings (version 40, byte mode) for the error
+// correction levels this app uses. A logo forces level H, which lowers it.
+const QR_MAX_BYTES = { Q: 1663, H: 1273 };
+
+const charCounterEl = document.getElementById('charCounter');
+function updateCharCounter(dataStr) {
+  const useLogo = logoEnabled.checked && logoImage;
+  const max = useLogo ? QR_MAX_BYTES.H : QR_MAX_BYTES.Q;
+  const used = new TextEncoder().encode(dataStr || '').length;
+  const remaining = max - used;
+  if (remaining > 10) { charCounterEl.hidden = true; return { max, used, remaining }; }
+  charCounterEl.hidden = false;
+  charCounterEl.classList.remove('neutral', 'warn', 'over');
+  if (remaining < 0) {
+    charCounterEl.textContent = `${-remaining} Zeichen zu viel (max. ${max})`;
+    charCounterEl.classList.add('over');
+  } else {
+    charCounterEl.textContent = `${remaining}/${max} Zeichen übrig`;
+    charCounterEl.classList.add(remaining <= 5 ? 'warn' : 'neutral');
+  }
+  return { max, used, remaining };
+}
+
 let renderSeq = 0;
 
 async function render() {
@@ -368,10 +414,21 @@ async function render() {
   socialCard.hidden = !social;
   if (social) socialLabel.textContent = `${social.label} logo detected`;
 
+  const counter = updateCharCounter(dataStr);
+
   // No content yet: show a friendly placeholder instead of attempting to
   // encode an empty string (which isn't valid per the QR standard).
   if (!dataStr) {
     drawPlaceholder('🐒', 'Hier erscheint dein QR-Code, sobald du oben etwas eingibst.');
+    setPlaceholderState(true);
+    saveSettings();
+    return;
+  }
+
+  // Too long for what a QR code can hold at the current error-correction level
+  if (counter.remaining < 0) {
+    const useLogo = logoEnabled.checked && logoImage;
+    drawPlaceholder('🥵', `${-counter.remaining} Zeichen zu viel — bitte kürzen${useLogo ? ' (mit Logo ist das Limit niedriger)' : ''}.`);
     setPlaceholderState(true);
     saveSettings();
     return;
@@ -382,7 +439,7 @@ async function render() {
   if (seq !== renderSeq) return; // a newer render took over
 
   if (!ok) {
-    drawPlaceholder('⚠️', 'Dieser Inhalt kann nicht als QR-Code kodiert werden — bitte kürzen.');
+    drawPlaceholder('⚠️', 'Dieser Inhalt kann nicht als QR-Code kodiert werden.');
     setPlaceholderState(true);
     saveSettings();
     return;
@@ -580,6 +637,8 @@ function hideToast() { clearTimeout(toastTimer); toastEl.hidden = true; }
 
 // ---------- Export ----------
 const exportSize = document.getElementById('exportSize');
+const exportMenu = wireDropdown('exportMenuToggle', 'exportMenu');
+exportSize.addEventListener('click', (e) => e.stopPropagation());
 exportSize.addEventListener('change', saveSettings);
 
 function sanitizeFilenamePart(s) {
@@ -606,7 +665,7 @@ function buildDownloadName() {
 }
 
 async function downloadImage(mime, ext) {
-  if (render.isPlaceholder) { showToast('Enter content first'); return; }
+  if (render.isPlaceholder) { showToast('No valid QR code to download yet'); return; }
   const size = Number(exportSize.value) || QR_SIZE;
   let canvas = previewCanvas;
   if (size !== QR_SIZE) {
@@ -642,8 +701,9 @@ function makeSvgQR(dataStr) {
   });
 }
 document.getElementById('downloadSvg').addEventListener('click', () => {
+  exportMenu.hidden = true;
   const dataStr = buildData();
-  if (!dataStr) { showToast('Enter content first'); return; }
+  if (!dataStr || render.isPlaceholder) { showToast('No valid QR code to download yet'); return; }
   makeSvgQR(dataStr).download({ name: buildDownloadName(), extension: 'svg' });
 });
 
@@ -676,8 +736,8 @@ async function copyText(textPromise) {
   }
 }
 document.getElementById('copyIframeBtn').addEventListener('click', async () => {
-  dropdownMenu.hidden = true;
-  if (!buildData()) { showToast('Enter content first'); return; }
+  exportMenu.hidden = true;
+  if (!buildData() || render.isPlaceholder) { showToast('No valid QR code to copy yet'); return; }
   const ok = await copyText(buildIframeCode());
   showToast(ok ? 'iframe code copied' : 'Could not copy — please try again');
 });
@@ -741,7 +801,7 @@ function saveSettings() {
     frameRadius: frameRadius.value, framePadding: framePadding.value, frameMargin: frameMargin.value,
     titleEnabled: titleEnabled.checked, titlePosition: titlePosition.value,
     socialEnabled: socialEnabled.checked, styleEnabled: styleEnabled.checked,
-    exportSize: exportSize.value,
+    exportSize: exportSize.value, previewCollapsed: previewCollapsible.hidden,
     dataFields: getDataFieldValues(),
   };
   localStorage.setItem('qra-settings', JSON.stringify(s));
@@ -770,6 +830,7 @@ function loadSettings() {
   titlePosition.value = s.titlePosition ?? titlePosition.value;
   socialEnabled.checked = s.socialEnabled !== false;
   exportSize.value = s.exportSize ?? exportSize.value;
+  setPreviewCollapsed(!!s.previewCollapsed);
   setDataFieldValues(s.dataFields);
 
   updateContentUI();

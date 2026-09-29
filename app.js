@@ -223,10 +223,8 @@ const logoFields = document.getElementById('logoFields');
 const logoFile = document.getElementById('logoFile');
 let logoImage = null;
 logoEnabled.addEventListener('change', () => { logoFields.hidden = !logoEnabled.checked; scheduleRender(); });
-logoFile.addEventListener('change', async () => {
-  const f = logoFile.files[0];
-  if (!f) { logoImage = null; scheduleRender(); return; }
-  logoImage = await loadImageFile(f);
+wireDropZone('logoDrop', 'logoFile', 'logoDropLabel', async (file) => {
+  logoImage = file ? await loadImageFile(file) : null;
   scheduleRender();
 });
 
@@ -238,10 +236,8 @@ const bgImageOpacity = document.getElementById('bgImageOpacity');
 const bgImageOpacityLabel = document.getElementById('bgImageOpacityLabel');
 let backgroundImage = null;
 bgImageEnabled.addEventListener('change', () => { bgImageFields.hidden = !bgImageEnabled.checked; scheduleRender(); });
-bgImageFile.addEventListener('change', async () => {
-  const f = bgImageFile.files[0];
-  if (!f) { backgroundImage = null; scheduleRender(); return; }
-  backgroundImage = await loadImageFile(f);
+wireDropZone('bgImageDrop', 'bgImageFile', 'bgImageDropLabel', async (file) => {
+  backgroundImage = file ? await loadImageFile(file) : null;
   scheduleRender();
 });
 bgImageOpacity.addEventListener('input', () => {
@@ -260,6 +256,40 @@ function loadImageFile(file) {
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+// A JPG75-style drop zone: click/tap opens the file picker, or drag an image in.
+// onFile(file|null) is called with the chosen file (or null if cleared).
+function wireDropZone(dropId, inputId, labelId, onFile) {
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+
+  function setFile(file) {
+    label.textContent = file ? file.name : 'Tap to choose an image';
+    onFile(file || null);
+  }
+
+  input.addEventListener('change', () => setFile(input.files[0] || null));
+
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.add('drag');
+  }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.remove('drag');
+  }));
+  drop.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      try {
+        // reflect the dropped file in the <input> too, so it stays in sync
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+      } catch (err) { /* older browsers: input stays out of sync, harmless */ }
+      setFile(file);
+    }
   });
 }
 
@@ -415,6 +445,7 @@ async function render() {
   if (social) socialLabel.textContent = `${social.label} logo detected`;
 
   const counter = updateCharCounter(dataStr);
+  updateChangedMarkers();
 
   // No content yet: show a friendly placeholder instead of attempting to
   // encode an empty string (which isn't valid per the QR standard).
@@ -861,6 +892,19 @@ const FIELD_DEFAULTS = {
   bgImageOpacity: '30',
   exportSize: '600',
 };
+
+// Shows a small blue dot next to a reset-label's name whenever its value
+// no longer matches the default (the label is also the click-to-reset control).
+function updateChangedMarkers() {
+  document.querySelectorAll('.reset-label').forEach(label => {
+    const id = label.dataset.target;
+    if (!(id in FIELD_DEFAULTS)) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    label.classList.toggle('changed', String(el.value) !== String(FIELD_DEFAULTS[id]));
+  });
+}
+
 document.querySelectorAll('.reset-label').forEach(label => {
   label.addEventListener('click', () => {
     const id = label.dataset.target;

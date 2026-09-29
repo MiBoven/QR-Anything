@@ -94,6 +94,13 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
+### 0.1.8 — 2026-09-28 — Consistent spacing, drag & drop, changed markers
+- Fixed uneven spacing around the collapsible QR preview card (it used an oversized reserved area for its toggle button); the card now uses the same toggle-row style as the other sections
+- The collapsed preview card now shows the label "QR code preview" instead of an empty bar
+- More breathing room between a toggle's label/checkbox row and its expanded fields (Adjust style, Logo, Background image, Frame, Title)
+- Logo and background image can now be chosen via drag & drop, not just tap-to-browse — same style as JPG75 is Enough
+- Any value that differs from its default now shows a small blue dot next to its label (the same label that resets it on click)
+
 ### 0.1.7 — 2026-09-28 — Character limit, export menu, collapsible preview
 - QR content: a character counter now appears once fewer than 10 characters remain — neutral at 10–6, orange/yellow at 5–0, and red with "X zu viel" once the limit is exceeded. The limit depends on the error-correction level, which is lower when a center logo is enabled (1273 vs. 1663 characters)
 - Content that's too long now shows 🥵 in the preview instead of the generic warning icon

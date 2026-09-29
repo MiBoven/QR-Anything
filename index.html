@@ -76,9 +76,12 @@
 <!-- ========== Live preview ========== -->
 <div class="preview-sticky">
 <div class="card preview-card">
-  <button type="button" class="preview-collapse-toggle" id="previewCollapseToggle" title="Collapse/expand preview">
-    <span id="previewCollapseIcon">▾</span>
-  </button>
+  <div class="toggle-row preview-toggle-row">
+    <label class="label-main">QR code preview</label>
+    <button type="button" class="icon" id="previewCollapseToggle" title="Collapse/expand preview">
+      <span id="previewCollapseIcon">▾</span>
+    </button>
+  </div>
   <div id="previewCollapsible">
     <div id="previewWrap"><canvas id="previewCanvas" width="600" height="600"></canvas></div>
     <div class="dl-row">
@@ -161,7 +164,10 @@
     <input type="checkbox" id="logoEnabled">
   </div>
   <div id="logoFields" hidden>
-    <input type="file" id="logoFile" accept="image/*">
+    <div class="drop drop-compact" id="logoDrop">
+      <p><strong id="logoDropLabel">Tap to choose an image</strong><br>or drag and drop it here</p>
+      <input type="file" id="logoFile" accept="image/*">
+    </div>
     <p class="hint">A logo forces high error correction and is capped in size so the code stays scannable.</p>
   </div>
 </div>
@@ -173,7 +179,10 @@
     <input type="checkbox" id="bgImageEnabled">
   </div>
   <div id="bgImageFields" hidden>
-    <input type="file" id="bgImageFile" accept="image/*">
+    <div class="drop drop-compact" id="bgImageDrop">
+      <p><strong id="bgImageDropLabel">Tap to choose an image</strong><br>or drag and drop it here</p>
+      <input type="file" id="bgImageFile" accept="image/*">
+    </div>
     <div class="row">
       <label class="label-sub reset-label" style="min-width:70px;" data-target="bgImageOpacity" title="Click to reset">Visibility</label>
       <input type="range" id="bgImageOpacity" min="0" max="100" value="30">
@@ -273,7 +282,7 @@
 <div id="scanResult" class="scan-result" hidden></div>
 <button id="scanTestBtn" class="secondary full">Run scan test</button>
 
-<footer>QR Anything · v0.1.7</footer>
+<footer>QR Anything · v0.1.8</footer>
 
 <!-- ========== Details modal (full form for multi-field content types) ========== -->
 <div class="modal-bg" id="detailsModalBg">
@@ -326,7 +335,7 @@
   <div class="modal">
     <h2>About QR Anything</h2>
     <p>QR Anything — Give me a Quick Response!<br>
-    Version 0.1.7</p>
+    Version 0.1.8</p>
     <p class="hint">Creates styled QR codes for text, links, Wi-Fi, contacts and more — entirely in your browser. Nothing is ever uploaded.</p>
     <button class="close" id="closeAboutModal">Close</button>
   </div>

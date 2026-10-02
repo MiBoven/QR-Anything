@@ -199,6 +199,8 @@ styleEnabled.addEventListener('change', () => { styleFields.hidden = !styleEnabl
 [dotType, cornerType].forEach(el => el.addEventListener('input', scheduleRender));
 wireColorHex('dotColor', 'dotColorHex');
 wireColorHex('bgColor', 'bgColorHex');
+wireEyedropper('dotColorEyedropper', 'dotColor', 'dotColorHex');
+wireEyedropper('bgColorEyedropper', 'bgColor', 'bgColorHex');
 
 // Syncs a <input type=color> with a paired hex text field in both directions.
 function wireColorHex(colorId, hexId) {
@@ -214,6 +216,23 @@ function wireColorHex(colorId, hexId) {
       colorEl.value = ('#' + [...v.slice(1)].map(c => c + c).join('')).toLowerCase();
       scheduleRender();
     }
+  });
+}
+
+// Lets the person sample a color from anywhere on screen (not just the page) via the
+// browser's native eyedropper. Only Chromium-based desktop browsers support this
+// (Chrome/Edge 95+) — the button stays hidden everywhere else, mobile included.
+function wireEyedropper(btnId, colorId, hexId) {
+  const btn = document.getElementById(btnId);
+  if (!('EyeDropper' in window)) return; // stays hidden
+  btn.hidden = false;
+  btn.addEventListener('click', async () => {
+    try {
+      const result = await new EyeDropper().open();
+      document.getElementById(colorId).value = result.sRGBHex;
+      document.getElementById(hexId).value = result.sRGBHex;
+      scheduleRender();
+    } catch (err) { /* user pressed Escape — nothing to do */ }
   });
 }
 
@@ -307,6 +326,7 @@ frameEnabled.addEventListener('change', () => { frameFields.hidden = !frameEnabl
 frameColorSync.addEventListener('change', () => { frameColorRow.hidden = frameColorSync.checked; scheduleRender(); });
 [frameThickness, frameRadius, framePadding, frameMargin].forEach(el => el.addEventListener('input', scheduleRender));
 wireColorHex('frameColor', 'frameColorHex');
+wireEyedropper('frameColorEyedropper', 'frameColor', 'frameColorHex');
 
 // Effective frame color: either the user's own choice, or synced to the code color
 function getFrameColor(style) {

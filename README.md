@@ -94,6 +94,9 @@ Works in all modern browsers (Chrome, Safari, Firefox, Edge). Requires `<canvas>
 
 ## Changelog
 
+### 0.1.9 — 2026-09-28 — Screen eyedropper for colors
+- A 💧 button now appears next to the code, background and frame color fields on browsers that support the native EyeDropper API (Chrome/Edge on desktop) — it lets you sample any color from the whole screen, not just the page. Hidden automatically where unsupported (Firefox, Safari, all mobile browsers)
+
 ### 0.1.8 — 2026-09-28 — Consistent spacing, drag & drop, changed markers
 - Fixed uneven spacing around the collapsible QR preview card (it used an oversized reserved area for its toggle button); the card now uses the same toggle-row style as the other sections
 - The collapsed preview card now shows the label "QR code preview" instead of an empty bar

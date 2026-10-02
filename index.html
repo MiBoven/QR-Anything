@@ -144,6 +144,7 @@
         <div class="color-row">
           <input type="color" id="dotColor" value="#000000">
           <input type="text" id="dotColorHex" class="hex-input" value="#000000" maxlength="7">
+          <button type="button" class="icon eyedropper-btn" id="dotColorEyedropper" title="Pick color from screen" hidden>💧</button>
         </div>
       </div>
       <div class="field">
@@ -151,6 +152,7 @@
         <div class="color-row">
           <input type="color" id="bgColor" value="#ffffff">
           <input type="text" id="bgColorHex" class="hex-input" value="#ffffff" maxlength="7">
+          <button type="button" class="icon eyedropper-btn" id="bgColorEyedropper" title="Pick color from screen" hidden>💧</button>
         </div>
       </div>
     </div>
@@ -206,6 +208,7 @@
           <div class="color-row" id="frameColorRow">
             <input type="color" id="frameColor" value="#000000">
             <input type="text" id="frameColorHex" class="hex-input" value="#000000" maxlength="7">
+            <button type="button" class="icon eyedropper-btn" id="frameColorEyedropper" title="Pick color from screen" hidden>💧</button>
           </div>
           <label class="checkbox-row"><input type="checkbox" id="frameColorSync"> Same as code color</label>
         </div>
@@ -282,7 +285,7 @@
 <div id="scanResult" class="scan-result" hidden></div>
 <button id="scanTestBtn" class="secondary full">Run scan test</button>
 
-<footer>QR Anything · v0.1.8</footer>
+<footer>QR Anything · v0.1.9</footer>
 
 <!-- ========== Details modal (full form for multi-field content types) ========== -->
 <div class="modal-bg" id="detailsModalBg">
@@ -335,7 +338,7 @@
   <div class="modal">
     <h2>About QR Anything</h2>
     <p>QR Anything — Give me a Quick Response!<br>
-    Version 0.1.8</p>
+    Version 0.1.9</p>
     <p class="hint">Creates styled QR codes for text, links, Wi-Fi, contacts and more — entirely in your browser. Nothing is ever uploaded.</p>
     <button class="close" id="closeAboutModal">Close</button>
   </div>

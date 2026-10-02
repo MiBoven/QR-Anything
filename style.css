@@ -104,6 +104,7 @@ input[type=color] {
 .color-row { display: flex; align-items: center; gap: 8px; }
 .color-row input[type=color] { flex: 0 0 46px; width: 46px; padding: 2px; }
 .hex-input { flex: 1; font-family: ui-monospace, monospace; }
+.eyedropper-btn { flex: 0 0 38px; width: 38px; height: 38px; font-size: 16px; padding: 0; }
 .reset-label { cursor: pointer; user-select: none; }
 .reset-label:hover, .reset-label:active { color: var(--accent); }
 
